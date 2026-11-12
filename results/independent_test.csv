@@ -1,0 +1,120 @@
+id,question,condition,expected,actual,correct,executed,validator_passed,approved,seconds,sql,error,issues
+h01,What was our sales revenue in January 2025?,baseline,29888.94,49244.82,False,True,False,False,5.35,"SELECT SUM(order_items.quantity * products.unit_price)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id
+WHERE orders.order_date <= '2025-01-31' AND orders.order_date >= '2025-01-01'",,Missing completed order status filter | Revenue should use order item quantity multiplied by its unit price
+h01,What was our sales revenue in January 2025?,semantic,29888.94,657.50,False,True,False,False,6.46,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM orders
+JOIN order_items ON orders.order_id = order_items.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id
+WHERE orders.order_status = 'completed'
+AND orders.order_date = '2025-01-01'",,Date filters do not clearly cover the full requested month
+h02,How many orders were fulfilled in June 2025?,baseline,44,0,False,True,False,False,1.73,SELECT COUNT(*) FROM orders WHERE order_date = '2025-06-01' AND order_status = 'fulfilled',,Missing completed order status filter | Date filters do not clearly cover the full requested month
+h02,How many orders were fulfilled in June 2025?,semantic,44,1,False,True,False,False,3.04,SELECT COUNT(*) FROM orders WHERE order_date = '2025-06-01' AND order_status = 'completed',,Date filters do not clearly cover the full requested month
+h03,What was our sales revenue in Q2 2025?,baseline,108272.86,160315.27,False,True,False,False,5.42,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id
+WHERE orders.order_date >= '2025-04-01' AND orders.order_date < '2025-07-01'",,Missing completed order status filter
+h03,What was our sales revenue in Q2 2025?,semantic,108272.86,108272.86,True,True,False,False,5.54,"SELECT SUM(oi.quantity * oi.unit_price)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+WHERE o.order_status = 'completed' AND o.order_date BETWEEN '2025-04-01' AND '2025-06-30'",,Date filters do not clearly cover the full requested quarter
+h04,How many units did we sell in September 2025?,baseline,248,,False,False,False,False,2.48,"SELECT SUM(quantity)
+FROM order_items
+WHERE order_date = '2025-09-01' AND EXTRACT(YEAR FROM order_date) = 2025","BinderException: Binder Error: Referenced column ""order_date"" not found in FROM clause!
+Candidate bindings: ""order_id"", ""order_item_id"", ""product_id""
+
+LINE 3: WHERE order_date = '2025-09-01' AND EXTRACT(YEAR FROM order_date...
+              ^^^^^^^^^^",Sales metric needs the orders table | Missing completed order status filter | Column order_date requires orders table | Date filters do not clearly cover the full requested month
+h04,How many units did we sell in September 2025?,semantic,248,5,False,True,False,False,4.53,"SELECT SUM(order_items.quantity)
+FROM orders
+JOIN order_items ON orders.order_id = order_items.order_id
+WHERE orders.order_date = '2025-09-01'
+AND orders.order_status = 'completed'",,Date filters do not clearly cover the full requested month
+h05,What was our Clothing category revenue?,baseline,0.00,,False,False,False,False,4.02,"SELECT SUM(order_items.quantity * products.unit_price)
+FROM order_items
+JOIN products ON order_items.product_id = products.product_id
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+WHERE products.category = 'Clothing'",ValueError: Expected one non-null scalar result,Missing completed order status filter | Revenue should use order item quantity multiplied by its unit price
+h05,What was our Clothing category revenue?,semantic,0.00,,False,False,True,False,6.03,"SELECT SUM(oi.quantity * oi.unit_price)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.order_status = 'completed' AND p.category = 'Clothing' AND o.order_date <= '2025-12-31'",ValueError: Expected one non-null scalar result,
+h06,How much revenue came from customers in the South region?,baseline,138275.00,193709.10,False,True,False,False,3.29,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+WHERE customers.region = 'South'",,Missing completed order status filter
+h06,How much revenue came from customers in the South region?,semantic,138275.00,138275.00,True,True,True,True,7.33,"SELECT SUM(oi.quantity * oi.unit_price)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE c.region = 'South' AND o.order_status = 'completed' AND o.order_date <= '2025-12-31'
+AND EXISTS (
+    SELECT 1 FROM products p WHERE p.product_id = oi.product_id
+)",,
+h07,How many customers purchased from us in Q3 2025?,baseline,132,152,False,True,False,False,4.58,"SELECT COUNT(DISTINCT customers.customer_id)
+FROM customers
+JOIN orders ON customers.customer_id = orders.customer_id
+JOIN order_items ON orders.order_id = order_items.order_id
+WHERE orders.order_date >= '2025-07-01' AND orders.order_date < '2025-10-01'",,Missing completed order status filter
+h07,How many customers purchased from us in Q3 2025?,semantic,132,132,True,True,True,True,5.57,"SELECT COUNT(DISTINCT customer_id)
+FROM orders
+JOIN order_items ON orders.order_id = order_items.order_id
+WHERE orders.order_date >= '2025-07-01' AND orders.order_date < '2025-10-01'
+AND orders.order_status = 'completed'",,
+h08,What was the average order value in Q1 2025?,baseline,711.7719653179191,,False,False,False,False,10.43,"SELECT AVG(total_amount)
+FROM (
+    SELECT order_id, SUM(quantity * unit_price) as total_amount
+    FROM orders
+    JOIN order_items ON orders.order_id = order_items.order_id
+    JOIN products ON order_items.product_id = products.product_id
+    WHERE order_date >= '2025-01-01' AND order_date < '2025-04-01'
+    GROUP BY order_id
+)
+
+This query calculates the average order value in Q1 2025 by joining the orders and order_items tables, then joining the products table to get the unit price for each product. It filters the orders to only include those from Q1 2025, calculates the total amount for each order by multiplying the quantity of each item by its unit price, groups the results by order_id, and finally calculates the average total amount across all orders.","ParseError: Invalid expression / Unexpected token. Line 11, Col: 10.
+  id
+    WHERE order_date >= '2025-01-01' AND order_date < '2025-04-01'
+    GROUP BY order_id
+)
+
+This [4mquery[0m calculates the average order value in Q1 2025 by joining the orders and order_items tables, then jo",Missing completed order status filter | Date filters do not clearly cover the full requested quarter
+h08,What was the average order value in Q1 2025?,semantic,711.7719653179191,,False,False,False,False,6.05,"SELECT AVG(SUM(order_items.quantity * order_items.unit_price))
+FROM orders
+JOIN order_items ON orders.order_id = order_items.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id
+WHERE orders.order_status = 'completed'
+AND orders.order_date BETWEEN '2025-01-01' AND '2025-03-31'","BinderException: Binder Error: aggregate function calls cannot be nested
+
+LINE 1: SELECT AVG(SUM(order_items.quantity * order_items.unit_price))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",Date filters do not clearly cover the full requested quarter
+h09,How many distinct products did we sell in Q4 2025?,baseline,20,,False,False,False,False,4.43,"SELECT COUNT(DISTINCT product_id) FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+WHERE orders.order_date >= '2025-10-01' AND orders.order_date < '2026-01-01'
+JOIN products ON order_items.product_id = products.product_id","ParserException: Parser Error: syntax error at or near ""JOIN""
+
+LINE 4: JOIN products ON order_items.product_id = products.product_...
+        ^^^^",Missing completed order status filter
+h09,How many distinct products did we sell in Q4 2025?,semantic,20,20,True,True,True,True,5.61,"SELECT COUNT(DISTINCT product_id) FROM order_items
+JOIN orders ON orders.order_id = order_items.order_id
+WHERE orders.order_date >= '2025-10-01' AND orders.order_date < '2026-01-01'
+AND orders.order_status = 'completed'",,
+h10,How many completed orders included Electronics products?,baseline,297,0,False,True,True,True,3.91,"SELECT COUNT(DISTINCT o.order_id)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.order_status = 'Completed' AND p.category = 'Electronics'",,
+h10,How many completed orders included Electronics products?,semantic,297,297,True,True,True,True,5.53,"SELECT COUNT(DISTINCT o.order_id)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.order_status = 'completed' AND p.category = 'Electronics'",,

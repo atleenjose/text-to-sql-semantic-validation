@@ -1,0 +1,132 @@
+id,question,condition,expected,actual,correct,executed,seconds,sql,error
+q01,What is our total sales revenue?,baseline,507269.11,717696.70,False,True,7.63,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id",
+q01,What is our total sales revenue?,semantic,507269.11,,False,False,10.87,"SELECT SUM(order_items.quantity * order_items.unit_price) as total_sales_revenue
+FROM orders
+JOIN order_items ON orders.order_id = order_items.order_id
+WHERE orders.order_status = 'completed'
+AND orders.order_date <= '2025-12-31'
+AND order_items.product_id IN (
+    SELECT product_id
+    FROM products
+    WHERE products.product_id IN (
+        SELECT product_id
+        FROM orders
+        JOIN order_items ON orders.order_id = order_items.order_id
+        WHERE orders.order_status IN ('completed', 'cancelled', 'pending', 'refunded')
+        GROUP BY product_id
+        HAVING COUNT(DISTINCT orders.order_id) = 0
+    )
+)",ValueError: Expected one non-null scalar result
+q02,What is the average order value?,baseline,715.4712411847672,,False,False,5.98,"SELECT AVG(total_price) FROM (
+  SELECT order_id, SUM(quantity * unit_price) as total_price
+  FROM order_items
+  JOIN orders ON order_items.order_id = orders.order_id
+  GROUP BY order_id
+) AS orders_total
+
+This query calculates the average order value by first joining the order_items and orders tables, then grouping by order_id and summing the quantity multiplied by unit_price for each order. The result is then averaged to get the average order value.","ParseError: Invalid expression / Unexpected token. Line 8, Col: 4.
+  tems
+  JOIN orders ON order_items.order_id = orders.order_id
+  GROUP BY order_id
+) AS orders_total
+
+[4mThis[0m query calculates the average order value by first joining the order_items and orders tables, then g"
+q02,What is the average order value?,semantic,715.4712411847672,,False,False,7.64,"SELECT AVG(total_sales) as average_order_value
+FROM (
+    SELECT customer_id, SUM(quantity * unit_price) as total_sales
+    FROM orders
+    JOIN order_items ON orders.order_id = order_items.order_id
+    JOIN products ON order_items.product_id = products.product_id
+    WHERE orders.order_status = 'completed'
+        AND orders.order_date <= '2025-12-31'
+    GROUP BY customer_id
+) as completed_orders","BinderException: Binder Error: Ambiguous reference to column name ""unit_price"" (use: 'order_items.unit_price' or 'products.unit_price')
+
+LINE 3:     SELECT customer_id, SUM(quantity * unit_price) as total_sales
+                                               ^^^^^^^^^^"
+q03,How many orders did we fulfil?,baseline,709,,False,False,2.79,"SELECT COUNT(DISTINCT order_id) FROM orders
+
+This query will return the total number of unique orders that have been fulfilled. The DISTINCT keyword ensures that each order is only counted once, even if the same customer placed multiple orders.","ParseError: Invalid expression / Unexpected token. Line 3, Col: 10.
+  SELECT COUNT(DISTINCT order_id) FROM orders
+
+This [4mquery[0m will return the total number of unique orders that have been fulfilled. The DISTINCT keyword ensure"
+q03,How many orders did we fulfil?,semantic,709,709,True,True,2.59,SELECT COUNT(DISTINCT order_id) FROM orders WHERE order_status = 'completed',
+q04,How many customers purchased from us?,baseline,197,,False,False,3.85,"SELECT COUNT(DISTINCT customers.customer_id) FROM customers
+LEFT JOIN orders ON customers.customer_id = orders.customer_id
+LEFT JOIN order_items ON orders.order_id = order_items.order_id
+GROUP BY customers.customer_id
+HAVING SUM(order_items.quantity) > 0",ValueError: Expected one non-null scalar result
+q04,How many customers purchased from us?,semantic,197,197,True,True,4.43,"SELECT COUNT(DISTINCT customers.customer_id) FROM customers
+JOIN orders ON customers.customer_id = orders.customer_id
+WHERE orders.order_status = 'completed' AND orders.order_date <= '2025-12-31'",
+q05,How many units did we sell?,baseline,3560,5057,False,True,0.81,SELECT SUM(quantity) FROM order_items,
+q05,How many units did we sell?,semantic,3560,3560,True,True,3.68,"SELECT SUM(order_items.quantity)
+FROM orders
+JOIN order_items ON orders.order_id = order_items.order_id
+WHERE orders.order_status = 'completed'",
+q06,What was our Electronics category revenue?,baseline,81083.92,116442.98,False,True,4.16,"SELECT SUM(order_items.quantity * products.unit_price)
+FROM order_items
+JOIN products ON order_items.product_id = products.product_id
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+WHERE products.category = 'Electronics'",
+q06,What was our Electronics category revenue?,semantic,81083.92,81083.92,True,True,6.13,"SELECT SUM(oi.quantity * oi.unit_price)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.order_status = 'completed' AND p.category = 'Electronics' AND o.order_date <= '2025-12-31'",
+q07,What was our revenue from customers in the North region?,baseline,146599.18,210318.65,False,True,3.34,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+WHERE customers.region = 'North'",
+q07,What was our revenue from customers in the North region?,semantic,146599.18,146599.18,True,True,7.95,"SELECT SUM(oi.quantity * oi.unit_price)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE c.region = 'North' AND o.order_status = 'completed' AND o.order_date <= '2025-12-31'
+AND oi.product_id IN (
+    SELECT product_id
+    FROM products
+    WHERE category NOT IN ('cancelled', 'pending', 'refunded')
+)",
+q08,What was our sales revenue in March 2025?,baseline,43130.79,57948.85,False,True,5.46,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id
+WHERE orders.order_date >= '2025-03-01' AND orders.order_date < '2025-04-01'",
+q08,What was our sales revenue in March 2025?,semantic,43130.79,1189.85,False,True,7.49,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM orders
+JOIN order_items ON orders.order_id = order_items.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id
+WHERE orders.order_status = 'completed'
+AND orders.order_date = '2025-03-01'
+AND orders.order_date <= '2025-03-31'",
+q09,What was our sales revenue in Q4 2025?,baseline,136769.36,,False,False,7.89,"SELECT SUM(order_items.quantity * order_items.unit_price)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON order_items.product_id = products.product_id
+WHERE orders.order_date >= '2025-10-01' AND orders.order_date < '2026-01-01' AND region = 'North America';
+
+This query calculates the total sales revenue in Q4 2025 for the North America region by summing up the quantity of each product multiplied by its unit price for all orders in that quarter.","ParseError: Invalid expression / Unexpected token. Line 8, Col: 21.
+  date >= '2025-10-01' AND orders.order_date < '2026-01-01' AND region = 'North America';
+
+This query [4mcalculates[0m the total sales revenue in Q4 2025 for the North America region by summing up the quantity of each "
+q09,What was our sales revenue in Q4 2025?,semantic,136769.36,136769.36,True,True,4.44,"SELECT SUM(oi.quantity * oi.unit_price)
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+WHERE o.order_date >= '2025-10-01' AND o.order_date < '2026-01-01'
+AND o.order_status = 'completed'",
+q10,How many distinct products did we sell?,baseline,20,20,True,True,1.03,SELECT COUNT(DISTINCT product_id) FROM order_items,
+q10,How many distinct products did we sell?,semantic,20,,False,False,3.61,SELECT COUNT(DISTINCT product_id) FROM order_items WHERE order_status = 'completed' AND order_date <= '2025-12-31',"BinderException: Binder Error: Referenced column ""order_status"" not found in FROM clause!
+Candidate bindings: ""order_id"", ""order_item_id"", ""product_id""
+
+LINE 1: SELECT COUNT(DISTINCT product_id) FROM order_items WHERE order_status = 'completed' AND order_date <= '2025-12-31'
+                                                                 ^^^^^^^^^^^^"

@@ -1,0 +1,21 @@
+id,condition,correct,executed,validator_passed,approved,issues
+q01,baseline,False,True,False,False,Missing completed order status filter
+q01,semantic,False,False,True,False,SQL execution failed
+q02,baseline,False,False,False,False,Missing completed order status filter | SQL execution failed
+q02,semantic,False,False,False,False,Missing completed order status filter | SQL execution failed
+q03,baseline,False,False,False,False,Missing completed order status filter | SQL execution failed
+q03,semantic,True,True,True,True,
+q04,baseline,False,False,False,False,Missing completed order status filter | SQL execution failed
+q04,semantic,True,True,True,True,
+q05,baseline,False,True,False,False,Sales metric needs the orders table | Missing completed order status filter
+q05,semantic,True,True,True,True,
+q06,baseline,False,True,False,False,Missing completed order status filter | Revenue should use order item quantity multiplied by its unit price
+q06,semantic,True,True,True,True,
+q07,baseline,False,True,False,False,Missing completed order status filter
+q07,semantic,True,True,True,True,
+q08,baseline,False,True,False,False,Missing completed order status filter
+q08,semantic,False,True,False,False,Date filters do not clearly cover the full requested month
+q09,baseline,False,False,False,False,Expected one SELECT statement | SQL execution failed
+q09,semantic,True,True,True,True,
+q10,baseline,True,True,False,False,Sales metric needs the orders table | Missing completed order status filter
+q10,semantic,False,False,False,False,Sales metric needs the orders table | Column order_status requires orders table | Column order_date requires orders table | SQL execution failed

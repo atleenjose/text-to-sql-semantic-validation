@@ -12,8 +12,16 @@ import pandas as pd
 import sqlglot
 from sqlglot import exp
 
-SALES_TERMS = ("revenue", "sales", "sell", "sold", "purchased", "purchase", "fulfil", "fulfill", "order value")
-
+SALES_TERMS = (
+    "revenue",
+    "sales",
+    "sold",
+    "sell",
+    "purchased",
+    "fulfil",
+    "order value",
+    "completed orders",
+)
 
 def validate_sql(question: str, sql: str) -> dict:
     issues = []
@@ -74,11 +82,35 @@ def validate_sql(question: str, sql: str) -> dict:
         quarter, year = int(quarter_match.group(1)), int(quarter_match.group(2))
         start_month = 1 + (quarter - 1) * 3
         start = date(year, start_month, 1)
-        end = date(year + (quarter == 4), 1 if quarter == 4 else start_month + 3, 1)
-        if not _covers_date_interval(tree, start, end):
-            issues.append("Date filters do not clearly cover the full requested quarter")
+        end = date(
+            year + (quarter == 4),
+            1 if quarter == 4 else start_month + 3,
+            1
+        )
 
-    return {"passed": not issues, "issues": list(dict.fromkeys(issues))}
+        if not _covers_date_interval(tree, start, end):
+            issues.append(
+                "Date filters do not clearly cover the full requested quarter"
+            )
+
+    order_count_question = bool(
+        re.search(
+            r"\b(?:how many|number of|count of|total number of)\b"
+            r".{0,100}\borders\b",
+            question.lower(),
+        )
+    )
+
+    if order_count_question and _has_order_count_grain_issue(tree):
+        issues.append(
+            "Order count may be inflated by duplicate order items"
+        )
+
+    return {
+        "passed": not issues,
+        "issues": list(dict.fromkeys(issues))
+    }
+
 
 
 def _completed_filter(tree: exp.Expression) -> bool:
@@ -92,6 +124,42 @@ def _completed_filter(tree: exp.Expression) -> bool:
             return True
     return False
 
+def _has_order_count_grain_issue(tree: exp.Expression) -> bool:
+    """Detect unsafe order counting after a direct order items join."""
+
+    if not isinstance(tree, exp.Select):
+        return False
+
+    from_clause = tree.args.get("from_")
+    if from_clause is None:
+        return False
+
+    source = from_clause.this
+
+    if not isinstance(source, exp.Table):
+        return False
+
+    outer_tables = {source.name.lower()}
+
+    for join in tree.args.get("joins") or []:
+        if isinstance(join.this, exp.Table):
+            outer_tables.add(join.this.name.lower())
+
+    if not {"orders", "order_items"}.issubset(outer_tables):
+        return False
+
+    for expression in tree.expressions:
+        for count in expression.find_all(exp.Count):
+
+            if isinstance(count.this, exp.Star):
+                return True
+
+            if isinstance(count.this, exp.Column):
+                if count.this.name.lower() == "order_id":
+                    if not isinstance(count.this, exp.Distinct):
+                        return True
+
+    return False
 
 def _has_revenue_multiplication(tree: exp.Expression) -> bool:
     for mul in tree.find_all(exp.Mul):
@@ -108,7 +176,30 @@ def _covers_date_interval(tree: exp.Expression, start: date, end: date) -> bool:
     where = tree.args.get("where")
     if where is None:
         return False
-    
+    for between in where.find_all(exp.Between):
+        column = between.this
+
+        if not isinstance(column, exp.Column):
+            continue
+
+        if column.name.lower() != "order_date":
+            continue
+
+        low = between.args.get("low")
+        high = between.args.get("high")
+
+        if not isinstance(low, exp.Literal) or not isinstance(high, exp.Literal):
+            continue
+
+        try:
+            low_date = date.fromisoformat(low.this[:10])
+            high_date = date.fromisoformat(high.this[:10])
+        except (ValueError, TypeError):
+            continue
+
+        if low_date <= start and high_date >= end - timedelta(days=1):
+            return True
+        
     lower_ok = upper_ok = False
     for node in where.walk():
         if not isinstance(node, (exp.GTE, exp.GT, exp.LTE, exp.LT, exp.EQ)):

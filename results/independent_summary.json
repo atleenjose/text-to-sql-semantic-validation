@@ -1,0 +1,20 @@
+{
+  "baseline": {
+    "total": 10,
+    "executed": 6,
+    "numerically_correct": 0,
+    "validator_passed": 1,
+    "approved": 1,
+    "incorrect_approved": 1,
+    "correct_rejected": 0
+  },
+  "semantic": {
+    "total": 10,
+    "executed": 8,
+    "numerically_correct": 5,
+    "validator_passed": 5,
+    "approved": 4,
+    "incorrect_approved": 0,
+    "correct_rejected": 1
+  }
+}
