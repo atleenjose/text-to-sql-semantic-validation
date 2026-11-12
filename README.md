@@ -50,6 +50,12 @@ After improving the validator using observed failures, all 60 saved SQL generati
 
 These regression results are based on previously examined queries and do not represent independent validation performance.
 
+## Validation Demo
+
+The validator detects an incorrect order count caused by duplicate rows after joining tables.
+
+![Semantic Validation Demo](screenshots/validation_demo.png)
+
 ## Key Finding
 
 A query can execute successfully and still violate business definitions.
