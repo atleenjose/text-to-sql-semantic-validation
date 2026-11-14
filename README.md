@@ -10,7 +10,7 @@ This project investigates whether providing business definitions improves SQL ge
 
 ## Tech Stack
 
-Python | Mistral | Ollama | DuckDB | SQLGlot | Pandas
+Python | Mistral | Ollama | DuckDB | SQLGlot | Pandas | Streamlit
 
 ## Approach
 
@@ -52,9 +52,14 @@ These regression results are based on previously examined queries and do not rep
 
 ## Validation Demo
 
-The validator detects an incorrect order count caused by duplicate rows after joining tables.
+Built an interactive Streamlit application with two features:
 
-![Semantic Validation Demo](screenshots/validation_demo.png)
+1. **Generate SQL:** Generate queries using Mistral with optional business metric definitions.
+2. **Validate SQL:** Detect semantic errors and compare total sales revenue against a verified reference.
+
+The demo shows how SQL can execute successfully but still produce incorrect business results.
+
+![Validation Demo](screenshots/Demo1.png)
 
 ## Key Finding
 
